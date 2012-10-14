@@ -98,6 +98,7 @@ void vtkMarkerUtilities::GenerateMarker(vtkImageData *data, int style, int width
       }
     case vtkMarkerUtilities::CIRCLE:
       {
+      double stroke = 1.0;
       double c = (width - 1.0)/2.0;
       for (int i = 0; i < width; ++i)
         {
@@ -107,23 +108,38 @@ void vtkMarkerUtilities::GenerateMarker(vtkImageData *data, int style, int width
           double dy2 = (j - c)*(j - c);
           unsigned char color = 0;
           double dist = sqrt(dx2 + dy2);
-          if (dist < c - 0.5)
+          if (dist < c - 0.5 - stroke)
             {
             color = 255;
             }
-          else if (dist > c + 0.5)
+          else if (dist > c + 0.5 - stroke)
             {
             color = 0;
             }
           else
             {
-            double frac = 1.0 - (dist - (c - 0.5));
+            double frac = 1.0 - (dist - (c - 0.5 - stroke/2));
             frac = std::min(1.0, std::max(0.0, frac));
             color = static_cast<unsigned char>(255*frac);
             }
+          unsigned char opacity = 0;
+          if (dist < c - 0.5)
+            {
+            opacity = 255;
+            }
+          else if (dist > c + 0.5)
+            {
+            opacity = 0;
+            }
+          else
+            {
+            double frac = 1.0 - (dist - (c - 0.5));
+            frac = std::min(1.0, std::max(0.0, frac));
+            opacity = static_cast<unsigned char>(255*frac);
+            }
           image[4*width*i + 4*j] = image[4*width*i + 4*j + 1] =
-                                   image[4*width*i + 4*j + 2] = 255;
-          image[4*width*i + 4*j + 3] = color;
+                                   image[4*width*i + 4*j + 2] = color;
+          image[4*width*i + 4*j + 3] = opacity;
           }
         }
       break;

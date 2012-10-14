@@ -10,6 +10,7 @@
 #include "vtkVariant.h"
 #include "vtkVector.h"
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -223,10 +224,10 @@ vtkIncrementalForceLayout::vtkIncrementalForceLayout()
   this->Alpha = 0.1f;
   this->Theta = 0.8f;
   this->Charge = -50.0f;
-  this->Strength = 2.0f;
+  this->Strength = 1.0f;
   this->Distance = 20.0f;
-  this->Gravity = 0.05f;
-  this->Friction = 1.0f;
+  this->Gravity = 0.1f;
+  this->Friction = 0.75f;
 }
 
 vtkIncrementalForceLayout::~vtkIncrementalForceLayout()
@@ -251,10 +252,18 @@ void vtkIncrementalForceLayout::UpdatePositions()
     }
 
   // Gauss-Seidel relaxation for links
+  // Start at random edge to avoid ringing
+  std::vector<vtkIdType> shuffled(numEdges);
   for (vtkIdType e = 0; e < numEdges; ++e)
     {
-    vtkIdType s = this->Graph->GetSourceVertex(e);
-    vtkIdType t = this->Graph->GetTargetVertex(e);
+    shuffled[e] = e;
+    }
+  std::random_shuffle(shuffled.begin(), shuffled.end());
+  for (vtkIdType e = 0; e < numEdges; ++e)
+    {
+    vtkIdType edge = e;
+    vtkIdType s = this->Graph->GetSourceVertex(edge);
+    vtkIdType t = this->Graph->GetTargetVertex(edge);
     vtkVector2f& sPos = this->Impl->GetPosition(s);
     vtkVector2f& tPos = this->Impl->GetPosition(t);
     float x = tPos.X() - sPos.X();
@@ -265,6 +274,8 @@ void vtkIncrementalForceLayout::UpdatePositions()
       l = this->Alpha * this->Strength * (sqrtl - this->Distance) / sqrtl;
       x *= l;
       y *= l;
+      //x = std::min(x, this->Distance/10.0f);
+      //y = std::min(y, this->Distance/10.0f);
       float sWeight = 1.0f;
       float tWeight = 1.0f;
       float k = sWeight / (tWeight + sWeight);

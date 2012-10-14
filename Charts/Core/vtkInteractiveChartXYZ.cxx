@@ -57,6 +57,7 @@ vtkInteractiveChartXYZ::vtkInteractiveChartXYZ()
   this->NumberOfComponents = 0;
   this->SceneWidth = 0;
   this->SceneHeight = 0;
+  this->Pen->SetWidth(10);
   this->InitializeAxesBoundaryPoints();
 }
 
@@ -142,7 +143,7 @@ bool vtkInteractiveChartXYZ::Paint(vtkContext2D *painter)
       context->DrawPoints(this->ClippedPoints[0].GetData(),
                           static_cast<int>(this->ClippedPoints.size()),
                           this->ClippedColors->GetPointer(0),
-                          this->NumberOfComponents);
+                          4);
       }
 
     // Now to render the selected points.
@@ -216,6 +217,7 @@ void vtkInteractiveChartXYZ::UpdateClippedPoints()
       this->ClippedColors->InsertNextTupleValue(&rgb[0]);
       this->ClippedColors->InsertNextTupleValue(&rgb[1]);
       this->ClippedColors->InsertNextTupleValue(&rgb[2]);
+      this->ClippedColors->InsertNextValue(32);
       }
     }
 }
@@ -543,8 +545,11 @@ void vtkInteractiveChartXYZ::DrawTickMarks(vtkContext2D *painter)
     // re-apply the Box matrix and draw the tick marks as points
     context->PushMatrix();
     context->AppendTransform(this->Box.GetPointer());
-    context->DrawPoints(tickPoints[0].GetData(),
-                        static_cast<int>(tickPoints.size()));
+    if (tickPoints.size() > 0)
+      {
+      context->DrawPoints(tickPoints[0].GetData(),
+                          static_cast<int>(tickPoints.size()));
+      }
     this->TickLabelOffset[axis][0] = labelOffset[0];
     this->TickLabelOffset[axis][1] = labelOffset[1];
     }
@@ -794,8 +799,8 @@ void vtkInteractiveChartXYZ::SetInput(vtkTable *input,
 
   //generate a color lookup table
   vtkNew<vtkLookupTable> lookupTable;
-  double min = DBL_MAX;
-  double max = DBL_MIN;
+  double min = VTK_DOUBLE_MAX;
+  double max = VTK_DOUBLE_MIN;
   for (unsigned int i = 0; i < this->Points.size(); ++i)
     {
     double value = colorArr->GetComponent(i, 0);
@@ -803,20 +808,23 @@ void vtkInteractiveChartXYZ::SetInput(vtkTable *input,
       {
       max = value;
       }
-    else if (value < min)
+    if (value < min)
       {
       min = value;
       }
     }
+  cerr << min << "," << max << endl;
 
   lookupTable->SetNumberOfTableValues(256);
   lookupTable->SetRange(min, max);
   lookupTable->Build();
 
+  this->Colors->Initialize();
   for (unsigned int i = 0; i < this->Points.size(); ++i)
     {
     double value = colorArr->GetComponent(i, 0);
     unsigned char *rgb = lookupTable->MapValue(value);
+    cerr << static_cast<int>(rgb[0]) << "," << static_cast<int>(rgb[1]) << "," << static_cast<int>(rgb[2]) << endl;
     const unsigned char constRGB[3] = { rgb[0], rgb[1], rgb[2] };
     this->Colors->InsertNextTupleValue(&constRGB[0]);
     this->Colors->InsertNextTupleValue(&constRGB[1]);
